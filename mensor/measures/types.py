@@ -380,7 +380,9 @@ class _FeatureAttrsMixin(object):
             if self.ALLOW_ALL_ATTRIBUTES or attr in self.EXTRA_ATTRIBUTES:
                 setattr(self, attr, value)
             else:
-                raise KeyError("No such attribute {}.".format(attr))
+                raise AttributeError(
+                    "Cannot initialize {}<{}> with attribute {}.".format(self.__class__.__name__, self.name, attr)
+                )
 
     def __getattr__(self, name):
         if name.startswith('_'):
@@ -446,10 +448,7 @@ class _FeatureAttrsMixin(object):
     @transforms.setter
     def transforms(self, transforms):
         # TODO: Check structure of transforms dict
-        if not transforms:
-            self._transforms = {}
-        else:
-            self._transforms = transforms
+        self._transforms = {} if not transforms else transforms
 
     @property
     def as_external(self):
@@ -692,8 +691,8 @@ class _ResolvedFeature(_FeatureAttrsMixin):
 
 class _Dimension(_ProvidedFeature):
 
-    def __init__(self, name, expr=None, default=None, desc=None, shared=False, partition=False, requires_constraint=False, provider=None):
-        _ProvidedFeature.__init__(self, name, expr=expr, default=default, desc=desc, shared=shared, provider=provider)
+    def __init__(self, name, expr=None, default=None, desc=None, shared=False, partition=False, requires_constraint=False, provider=None, **attrs):
+        _ProvidedFeature.__init__(self, name, expr=expr, default=default, desc=desc, shared=shared, provider=provider, **attrs)
         if not shared and partition:
             raise ValueError("Partitions must be shared.")
         self.partition = partition
@@ -702,8 +701,8 @@ class _Dimension(_ProvidedFeature):
 
 class _StatisticalUnitIdentifier(_ProvidedFeature):
 
-    def __init__(self, name, expr=None, desc=None, role='foreign', dummy=False, provider=None):
-        _ProvidedFeature.__init__(self, name, expr=expr, desc=desc, shared=not dummy, provider=provider)
+    def __init__(self, name, expr=None, desc=None, role='foreign', dummy=False, provider=None, **attrs):
+        _ProvidedFeature.__init__(self, name, expr=expr, desc=desc, shared=not dummy, provider=provider, **attrs)
         assert role in ('primary', 'unique', 'foreign')
         if dummy:
             assert role == 'primary', "Dummy identifiers currently only makes sense when it is to be treated as primary."
@@ -777,8 +776,11 @@ class _StatisticalUnitIdentifier(_ProvidedFeature):
 class _Measure(_ProvidedFeature):
 
     def __init__(self, name, expr=None, default=None, desc=None,
-                 distribution='normal', shared=False, provider=None):
-        _ProvidedFeature.__init__(self, name, expr=expr, default=default, desc=desc, shared=shared, provider=provider)
+                 distribution='normal', shared=False, provider=None, **attrs):
+        _ProvidedFeature.__init__(
+            self, name, expr=expr, default=default, desc=desc, shared=shared, provider=provider,
+            **attrs
+        )
         self.distribution = distribution
 
     def transforms_for_unit_type(self, unit_type, stats_registry=None):
